@@ -25,7 +25,7 @@ class Block(nn.Module):
 
 
 class GPT(nn.Module):
-    def __init__(self, vocab_size, n_embd, n_head, n_layer, dropout, block_size):
+    def __init__(self, vocab_size, n_embd, n_head, n_layer, dropout, block_size, device):
         super().__init__()
         self.n_embd = n_embd
         self.n_layer = n_layer
@@ -33,8 +33,9 @@ class GPT(nn.Module):
         self.dropout = dropout
         self.vocab_size = vocab_size
         self.block_size = block_size
+        self.device = device
         self.embd = nn.Embedding(vocab_size, n_embd)
-        self.pos_embd = nn.Parameter(torch.zeros(1, block_size, n_embd))
+        self.pos_embd = nn.Embedding(block_size, n_embd)
         self.drop = nn.Dropout(dropout)
         self.blocks = nn.ModuleList([Block(n_embd, n_head, dropout) for _ in range(n_layer)])
         self.ln_f = nn.LayerNorm(n_embd)
@@ -42,7 +43,8 @@ class GPT(nn.Module):
 
     def forward(self, x, targets=None):
         # x is of shape (batch_size, block_size)
-        x = self.embd(x) + self.pos_embd
+        B, T = x.shape
+        x = self.embd(x) + self.pos_embd(torch.arange(T, device=self.device))
         x = self.drop(x)
         for block in self.blocks:
             x = block(x)

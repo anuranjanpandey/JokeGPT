@@ -61,7 +61,7 @@ if __name__ == "__main__":
             out[split] = losses.mean()
         return out
 
-    model = GPT(vocab_size, n_embd, n_head, n_layer, dropout, block_size).to(device)
+    model = GPT(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     for i in range(max_iters):
