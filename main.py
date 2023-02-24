@@ -82,3 +82,4 @@ if __name__ == "__main__":
         x = torch.randint(vocab_size, (1,1)).to(device)
         x = model.generate(x, max_len=500)
         print(decode(x[0].tolist()))
+        open('output.txt', 'w').write(decode(x[0].tolist()))
