@@ -62,15 +62,18 @@ if __name__ == "__main__":
         return out
 
     model = GPT(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
+    print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
+
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     for i in range(max_iters):
         model.train()
         X, Y = get_batch('train')
         logits, loss = model(X, Y)
+        optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
+
         if i % eval_interval == 0:
             losses = estimate_loss()
             print(f'Iteration {i} | Train loss {losses["train"]:.3f} | Val loss {losses["val"]:.3f}')
