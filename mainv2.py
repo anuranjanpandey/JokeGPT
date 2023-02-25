@@ -1,5 +1,5 @@
 import torch
-from gpt import GPT
+from gptv2 import GPTLanguageModel
 from preprocesssing import preprocess
 
 # Hyperparameters
@@ -61,28 +61,29 @@ if __name__ == "__main__":
             out[split] = losses.mean()
         return out
 
-    model = GPT(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
+    model = GPTLanguageModel(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
     print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # create a PyTorch optimizer
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
-    for i in range(max_iters):
-        model.train()
-        X, Y = get_batch('train')
-        logits, loss = model(X, Y)
+    for iter in range(max_iters):
+
+        # every once in a while evaluate the loss on train and val sets
+        if iter % eval_interval == 0 or iter == max_iters - 1:
+            losses = estimate_loss()
+            print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+
+        # sample a batch of data
+        xb, yb = get_batch('train')
+
+        # evaluate the loss
+        logits, loss = model(xb, yb)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
 
-        if i % eval_interval == 0 or i == max_iters - 1:
-            losses = estimate_loss()
-            print(f'Iteration {i} | Train loss {losses["train"]:.3f} | Val loss {losses["val"]:.3f}')
-        
-
-    # generate some jokes
-    model.eval()
-    for _ in range(10):
-        x = torch.randint(vocab_size, (1,1)).to(device)
-        x = model.generate(x, max_len=500)
-        print(decode(x[0].tolist()))
-        open('output.txt', 'w').write(decode(x[0].tolist()))
+    # generate from the model
+    context = torch.zeros((1, 1), dtype=torch.long, device=device)
+    print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
+    open('more.txt', 'w').write(decode(model.generate(context, max_new_tokens=10000)[0].tolist()))

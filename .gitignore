@@ -131,4 +131,3 @@ dmypy.json
 # jokes file because of large size
 jokes.txt
 .gitignore
-gptv2.py
