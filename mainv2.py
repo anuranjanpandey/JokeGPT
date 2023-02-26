@@ -27,13 +27,13 @@ def get_batch(train_data, val_data, split):
     return x, y
 
 @torch.no_grad()
-def estimate_loss(model):
+def estimate_loss(model, train_data, val_data):
     out = {}
     model.eval()
     for split in ['train', 'val']:
         losses = torch.zeros(eval_iters)
         for k in range(eval_iters):
-            X, Y = get_batch(split)
+            X, Y = get_batch(train_data, val_data, split)
             logits, loss = model(X, Y)
             losses[k] = loss.item()
         out[split] = losses.mean()
@@ -65,7 +65,7 @@ def train(model, epochs, train_data, val_data):
     for iter in range(epochs):
         # evaluate the loss on train and val sets
         if iter % eval_interval == 0 or iter == max_iters - 1:
-            losses = estimate_loss(model)
+            losses = estimate_loss(model, train_data, val_data)
             print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
 
             # Early stopping
@@ -113,9 +113,9 @@ def main():
     model = GPTLanguageModel(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
     print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 
-    history += train(model, max_iters, train_data, val_data)    
+    history = train(model, max_iters, train_data, val_data)    
 
-    plot_loss()
+    plot_loss(history)
 
     # context as input from the user
     context = input('Enter a context: ')
