@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import tiktoken
 from gptv2 import GPTLanguageModel
 from preprocesssing import preprocess
 
@@ -63,6 +64,15 @@ def train(model, epochs, train_data, val_data):
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     for iter in range(epochs):
+        # sample a batch of data
+        xb, yb = get_batch(train_data, val_data,'train')
+
+        # evaluate the loss
+        logits, loss = model(xb, yb)
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        optimizer.step()
+
         # evaluate the loss on train and val sets
         if iter % eval_interval == 0 or iter == max_iters - 1:
             losses = estimate_loss(model, train_data, val_data)
@@ -76,6 +86,17 @@ def train(model, epochs, train_data, val_data):
             
             history.append(losses)
 
+
+        # sample a batch of data
+        xb, yb = get_batch(train_data, val_data,'train')
+
+        # evaluate the loss
+        logits, loss = model(xb, yb)
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        optimizer.step()
+    
+    
         # sample a batch of data
         xb, yb = get_batch(train_data, val_data,'train')
 
@@ -96,18 +117,25 @@ def main():
     with open('jokes.txt', 'r', encoding='utf-8') as f:
         text = f.read()
 
+    # encode with tiktoken gpt tokenizer
+    enc = tiktoken.get_encoding('gpt2')
+    train_data, val_data = split_data(enc.encode(text), 0.9)
+    vocab_size = enc.vocab_size
+    encode = lambda s: enc.encode(s)
+    decode = lambda l: enc.decode(l)
+
     # character encoding decoding
-    chars = sorted(list(set(text)))
-    vocab_size = len(chars)
+    # chars = sorted(list(set(text)))
+    # vocab_size = len(chars)
 
-    stoi = { ch:i for i,ch in enumerate(chars) }
-    itos = { i:ch for i,ch in enumerate(chars) }
+    # stoi = { ch:i for i,ch in enumerate(chars) }
+    # itos = { i:ch for i,ch in enumerate(chars) }
 
-    encode = lambda s: [stoi[c] for c in s]
-    decode = lambda l: ''.join([itos[i] for i in l])
+    # encode = lambda s: [stoi[c] for c in s]
+    # decode = lambda l: ''.join([itos[i] for i in l])
 
-    data = torch.tensor(encode(text), dtype=torch.long)
-    train_data, val_data = split_data(data, 0.9)
+    # data = torch.tensor(encode(text), dtype=torch.long)
+    # train_data, val_data = split_data(data, 0.9)
 
 
     model = GPTLanguageModel(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
@@ -118,7 +146,8 @@ def main():
     plot_loss(history)
 
     # context as input from the user
-    context = input('Enter a context: ')
+    # context = input('Enter a context: ')
+    context = 'A man'
     context = torch.tensor(encode(context), dtype=torch.long, device=device)
     context = context.unsqueeze(0)
     decoded = decode(model.generate(context, max_new_tokens=500)[0].tolist())
