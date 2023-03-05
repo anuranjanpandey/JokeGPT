@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import tiktoken
 from gpt import GPTLanguageModel
 from preprocesssing import preprocess
 
@@ -116,20 +117,14 @@ def main():
     with open('jokes.txt', 'r', encoding='utf-8') as f:
         text = f.read()
 
-    # character encoding decoding
-    chars = sorted(list(set(text)))
-    vocab_size = len(chars)
-
-    stoi = { ch:i for i,ch in enumerate(chars) }
-    itos = { i:ch for i,ch in enumerate(chars) }
-
-    encode = lambda s: [stoi[c] for c in s]
-    decode = lambda l: ''.join([itos[i] for i in l])
-
-    data = torch.tensor(encode(text), dtype=torch.long)
+    # encode with tiktoken gpt tokenizer
+    enc = tiktoken.get_encoding('gpt2')
+    data = torch.tensor(enc.encode(text), dtype=torch.long)
     train_data, val_data = split_data(data, 0.9)
-
-
+    vocab_size = 50304 # GPT-2 vocab_size of 50257
+    encode = lambda s: enc.encode(s)
+    decode = lambda l: enc.decode(l)
+    
     model = GPTLanguageModel(vocab_size, n_embd, n_head, n_layer, dropout, block_size, device).to(device)
     print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
 
